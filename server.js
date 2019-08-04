@@ -4,6 +4,7 @@
 const express = require('express');
 const app = express();
 const superagent = require('superagent');
+//const pg = require(pg);
 
 //
 const cors = require('cors');
@@ -13,8 +14,27 @@ app.use(cors());
 require('dotenv').config();
 const PORT = process.env.PORT || 3000;
 
+// PG DB setup
+const { Client } = require('pg');
+
+const client = new Client({
+  connectionString: process.env.DATABASE_URL,
+  ssl: true,
+});
+
+client.connect();
+
+client.query('SELECT table_schema,table_name FROM information_schema.tables;', (err, res) => {
+  if (err)
+    console.log('error', err.message, err.stack);
+  for (let row of res.rows) {
+    console.log(JSON.stringify(row));
+  }
+  client.end();
+});
+
 // tell our express server to start listening on port PORT
-app.listen(PORT, () => console.log(`listening on port ${PORT}`));
+app.listen(PORT, () => console.log(`Listening on port ${PORT}`));
 
 //routes to handle user request and send the response from our database
 app.get('/location', (req,res) => {
