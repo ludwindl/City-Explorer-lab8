@@ -23,6 +23,7 @@ const client = new Client({
 });
 
 client.connect();
+client.on('error'), err => console.error(err)
 
 client.query('SELECT table_schema,table_name FROM information_schema.tables;', (err, res) => {
   if (err)
@@ -46,6 +47,7 @@ app.get('/weather', getWeather);
 app.get('/events', getEvents);
 
 
+// Models
 // constructor function to buld a city object instances
 function City(query, data){
   this.search_query = query;
