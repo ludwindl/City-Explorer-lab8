@@ -4,7 +4,6 @@
 const express = require('express');
 const app = express();
 const superagent = require('superagent');
-//const pg = require(pg);
 
 //
 const cors = require('cors');
@@ -23,7 +22,7 @@ const client = new Client({
 });
 
 client.connect();
-client.on('error'), err => console.error(err)
+client.on('error'), err => console.error(err);
 
 client.query('SELECT table_schema,table_name FROM information_schema.tables;', (err, res) => {
   if (err)
@@ -39,7 +38,7 @@ app.listen(PORT, () => console.log(`Listening on port ${PORT}`));
 
 //routes to handle user request and send the response from our database
 app.get('/location', (req,res) => {
-  searchToLatLong(req.query.data)
+  getLocation(req.query.data)
     .then(location => res.send(location));
 });
 
@@ -64,18 +63,26 @@ function Event(url, name, event_date, summary) {
   this.summary = summary;
 }
 
-function getEvents(request, response) {
-  const url = `https://www.eventbriteapi.com/v3/events/search/?location.longitude=${request.query.data.longitude}&location.latitude=${request.query.data.latitude}&expand=venue&token=${process.env.EVENTBRITE_API_KEY}`;
-  superagent.get(url)
-    .then(result => {
-      let eventData = result.body.events.map( event => new Event(event.url, event.name.text, event.start.local, event.summary));
-      response.send(eventData);
-    }).catch(error => {
-      console.error(error);
-      response.status(500).send('Status 500: Unable to get Event data');
+function lookupLocation(location) {
+  const SQL = `SELECT * FROM locations WHERE search_query=$1;`;
+  const values = [location];
+
+  return client.query(SQL, values)
+    .then(result =>{
+      if(result.rowCount > 0) {
+        // object exists in the database
+        // send response to the clientl
+      } else{
+        // create it
+        // insert the data
+        // STOPPED HERE: 7:40PM
+        const SQL = `INSERT INTO locations (search_query, formatted_query, latitude, longitude) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING RETURNING id;`;
+        const values = [this.search_query, this.formatted_query, this.latitude, this.longitude];
+      }
+
+        }
     });
 }
-
 
 function Weather(day) {
   this.forecast = day.summary;
@@ -95,10 +102,22 @@ function getWeather(request, response) {
     });
 }
 
-function searchToLatLong(query){
+function getLocation(query){
   const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${query}&key=${process.env.GEOCODE_API_KEY}`;
   return superagent.get(url)
     .then(res => {
       return new City(query, res);
+    });
+}
+
+function getEvents(request, response) {
+  const url = `https://www.eventbriteapi.com/v3/events/search/?location.longitude=${request.query.data.longitude}&location.latitude=${request.query.data.latitude}&expand=venue&token=${process.env.EVENTBRITE_API_KEY}`;
+  superagent.get(url)
+    .then(result => {
+      let eventData = result.body.events.map( event => new Event(event.url, event.name.text, event.start.local, event.summary));
+      response.send(eventData);
+    }).catch(error => {
+      console.error(error);
+      response.status(500).send('Status 500: Unable to get Event data');
     });
 }
